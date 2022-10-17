@@ -1,0 +1,38 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PackageId>IdentityServer4</PackageId>
+    <TargetFramework>net5.0</TargetFramework>
+    <Version>4.5.0</Version>
+    <Description>OpenID Connect and OAuth 2.0 Framework for ASP.NET Core</Description>
+    <Authors>Brock Allen;Dominick Baier</Authors>
+    <AssemblyName>IdentityServer4</AssemblyName>
+    <PackageTags>OAuth2;OAuth 2.0;OpenID Connect;Security;Identity;IdentityServer</PackageTags>
+    <PackageIcon>icon.jpg</PackageIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  
+  
+  <ItemGroup>
+    <PackageReference Include="IdentityModel" Version="6.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="5.0.17" />
+    <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="6.19.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="assets/icon.jpg" Pack="true" Visible="false" PackagePath="" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\IdentityServer4.5.Storage\IdentityServer4.5.Storage.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="assets\icon.jpg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>
