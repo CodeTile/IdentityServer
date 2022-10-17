@@ -1,6 +1,5 @@
-﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
-
+﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved. Licensed under the Apache
+// License, Version 2.0. See LICENSE in the project root for license information.
 
 using System;
 using System.Collections.Specialized;
@@ -19,17 +18,6 @@ namespace IdentityServer.UnitTests.Validation.AuthorizeRequest_Validation
 
         [Fact]
         [Trait("Category", Category)]
-        public void Null_Parameter()
-        {
-            var validator = Factory.CreateAuthorizeRequestValidator();
-
-            Func<Task> act = () => validator.ValidateAsync(null);
-
-            act.Should().Throw<ArgumentNullException>();
-        }
-
-        [Fact]
-        [Trait("Category", Category)]
         public async Task Empty_Parameters()
         {
             var validator = Factory.CreateAuthorizeRequestValidator();
@@ -39,34 +27,16 @@ namespace IdentityServer.UnitTests.Validation.AuthorizeRequest_Validation
             result.Error.Should().Be(OidcConstants.AuthorizeErrors.InvalidRequest);
         }
 
-        // fails because openid scope is requested, but no response type that indicates an identity token
         [Fact]
         [Trait("Category", Category)]
-        public async Task OpenId_Token_Only_Request()
+        public async Task Invalid_ResponseMode_For_CodeIdToken_ResponseType()
         {
             var parameters = new NameValueCollection();
-            parameters.Add(OidcConstants.AuthorizeRequest.ClientId, "implicitclient");
-            parameters.Add(OidcConstants.AuthorizeRequest.Scope, IdentityServerConstants.StandardScopes.OpenId);
-            parameters.Add(OidcConstants.AuthorizeRequest.RedirectUri, "oob://implicit/cb");
-            parameters.Add(OidcConstants.AuthorizeRequest.ResponseType, OidcConstants.ResponseTypes.Token);
-
-            var validator = Factory.CreateAuthorizeRequestValidator();
-            var result = await validator.ValidateAsync(parameters);
-
-            result.IsError.Should().BeTrue();
-            result.Error.Should().Be(OidcConstants.AuthorizeErrors.InvalidScope);
-        }
-
-        [Fact]
-        [Trait("Category", Category)]
-        public async Task Resource_Only_IdToken_Request()
-        {
-            var parameters = new NameValueCollection();
-            parameters.Add(OidcConstants.AuthorizeRequest.ClientId, "implicitclient");
-            parameters.Add(OidcConstants.AuthorizeRequest.Scope, "resource");
-            parameters.Add(OidcConstants.AuthorizeRequest.RedirectUri, "oob://implicit/cb");
-            parameters.Add(OidcConstants.AuthorizeRequest.ResponseType, OidcConstants.ResponseTypes.IdToken);
-            parameters.Add(OidcConstants.AuthorizeRequest.Nonce, "abc");
+            parameters.Add(OidcConstants.AuthorizeRequest.ClientId, "hybridclient");
+            parameters.Add(OidcConstants.AuthorizeRequest.Scope, "openid");
+            parameters.Add(OidcConstants.AuthorizeRequest.RedirectUri, "https://server/cb");
+            parameters.Add(OidcConstants.AuthorizeRequest.ResponseType, OidcConstants.ResponseTypes.CodeIdToken);
+            parameters.Add(OidcConstants.AuthorizeRequest.ResponseMode, OidcConstants.ResponseModes.Query);
 
             var validator = Factory.CreateAuthorizeRequestValidator();
             var result = await validator.ValidateAsync(parameters);
@@ -77,30 +47,50 @@ namespace IdentityServer.UnitTests.Validation.AuthorizeRequest_Validation
 
         [Fact]
         [Trait("Category", Category)]
-        public async Task Mixed_Token_Only_Request()
+        public async Task Invalid_ResponseMode_For_CodeIdTokenToken_ResponseType()
         {
             var parameters = new NameValueCollection();
-            parameters.Add(OidcConstants.AuthorizeRequest.ClientId, "implicitclient");
-            parameters.Add(OidcConstants.AuthorizeRequest.Scope, "openid resource");
-            parameters.Add(OidcConstants.AuthorizeRequest.RedirectUri, "oob://implicit/cb");
-            parameters.Add(OidcConstants.AuthorizeRequest.ResponseType, OidcConstants.ResponseTypes.Token);
+            parameters.Add(OidcConstants.AuthorizeRequest.ClientId, "hybridclient");
+            parameters.Add(OidcConstants.AuthorizeRequest.Scope, "openid");
+            parameters.Add(OidcConstants.AuthorizeRequest.RedirectUri, "https://server/cb");
+            parameters.Add(OidcConstants.AuthorizeRequest.ResponseType, OidcConstants.ResponseTypes.CodeIdTokenToken);
+            parameters.Add(OidcConstants.AuthorizeRequest.ResponseMode, OidcConstants.ResponseModes.Query);
 
             var validator = Factory.CreateAuthorizeRequestValidator();
             var result = await validator.ValidateAsync(parameters);
 
             result.IsError.Should().BeTrue();
-            result.Error.Should().Be(OidcConstants.AuthorizeErrors.InvalidScope);
+            result.Error.Should().Be(OidcConstants.AuthorizeErrors.InvalidRequest);
         }
 
         [Fact]
         [Trait("Category", Category)]
-        public async Task OpenId_IdToken_Request_Nonce_Missing()
+        public async Task Invalid_ResponseMode_For_CodeToken_ResponseType()
+        {
+            var parameters = new NameValueCollection();
+            parameters.Add(OidcConstants.AuthorizeRequest.ClientId, "hybridclient");
+            parameters.Add(OidcConstants.AuthorizeRequest.Scope, "openid");
+            parameters.Add(OidcConstants.AuthorizeRequest.RedirectUri, "https://server/cb");
+            parameters.Add(OidcConstants.AuthorizeRequest.ResponseType, OidcConstants.ResponseTypes.CodeToken);
+            parameters.Add(OidcConstants.AuthorizeRequest.ResponseMode, OidcConstants.ResponseModes.Query);
+
+            var validator = Factory.CreateAuthorizeRequestValidator();
+            var result = await validator.ValidateAsync(parameters);
+
+            result.IsError.Should().BeTrue();
+            result.Error.Should().Be(OidcConstants.AuthorizeErrors.InvalidRequest);
+        }
+
+        [Fact]
+        [Trait("Category", Category)]
+        public async Task Invalid_ResponseMode_For_IdToken_ResponseType()
         {
             var parameters = new NameValueCollection();
             parameters.Add(OidcConstants.AuthorizeRequest.ClientId, "implicitclient");
             parameters.Add(OidcConstants.AuthorizeRequest.Scope, "openid");
             parameters.Add(OidcConstants.AuthorizeRequest.RedirectUri, "oob://implicit/cb");
             parameters.Add(OidcConstants.AuthorizeRequest.ResponseType, OidcConstants.ResponseTypes.IdToken);
+            parameters.Add(OidcConstants.AuthorizeRequest.ResponseMode, OidcConstants.ResponseModes.Query);
 
             var validator = Factory.CreateAuthorizeRequestValidator();
             var result = await validator.ValidateAsync(parameters);
@@ -111,12 +101,14 @@ namespace IdentityServer.UnitTests.Validation.AuthorizeRequest_Validation
 
         [Fact]
         [Trait("Category", Category)]
-        public async Task Missing_ClientId()
+        public async Task Invalid_ResponseMode_For_IdTokenCodeToken_ResponseType()
         {
             var parameters = new NameValueCollection();
+            parameters.Add(OidcConstants.AuthorizeRequest.ClientId, "hybridclient");
             parameters.Add(OidcConstants.AuthorizeRequest.Scope, "openid");
-            parameters.Add(OidcConstants.AuthorizeRequest.RedirectUri, "https://server/callback");
-            parameters.Add(OidcConstants.AuthorizeRequest.ResponseType, OidcConstants.ResponseTypes.Code);
+            parameters.Add(OidcConstants.AuthorizeRequest.RedirectUri, "https://server/cb");
+            parameters.Add(OidcConstants.AuthorizeRequest.ResponseType, "id_token code token"); // Unconventional ordering
+            parameters.Add(OidcConstants.AuthorizeRequest.ResponseMode, OidcConstants.ResponseModes.Query);
 
             var validator = Factory.CreateAuthorizeRequestValidator();
             var result = await validator.ValidateAsync(parameters);
@@ -127,28 +119,50 @@ namespace IdentityServer.UnitTests.Validation.AuthorizeRequest_Validation
 
         [Fact]
         [Trait("Category", Category)]
-        public async Task Missing_Scope()
+        public async Task Invalid_ResponseMode_For_IdTokenToken_ResponseType()
+        {
+            var parameters = new NameValueCollection();
+            parameters.Add(OidcConstants.AuthorizeRequest.ClientId, "implicitclient");
+            parameters.Add(OidcConstants.AuthorizeRequest.Scope, "openid");
+            parameters.Add(OidcConstants.AuthorizeRequest.RedirectUri, "oob://implicit/cb");
+            parameters.Add(OidcConstants.AuthorizeRequest.ResponseType, OidcConstants.ResponseTypes.IdTokenToken);
+            parameters.Add(OidcConstants.AuthorizeRequest.ResponseMode, OidcConstants.ResponseModes.Query);
+
+            var validator = Factory.CreateAuthorizeRequestValidator();
+            var result = await validator.ValidateAsync(parameters);
+
+            result.IsError.Should().BeTrue();
+            result.Error.Should().Be(OidcConstants.AuthorizeErrors.InvalidRequest);
+        }
+
+        [Fact]
+        [Trait("Category", Category)]
+        public async Task Invalid_ResponseMode_For_TokenIdToken_ResponseType()
+        {
+            var parameters = new NameValueCollection();
+            parameters.Add(OidcConstants.AuthorizeRequest.ClientId, "implicitclient");
+            parameters.Add(OidcConstants.AuthorizeRequest.Scope, "openid");
+            parameters.Add(OidcConstants.AuthorizeRequest.RedirectUri, "oob://implicit/cb");
+            parameters.Add(OidcConstants.AuthorizeRequest.ResponseType, "token id_token"); // Unconventional order
+            parameters.Add(OidcConstants.AuthorizeRequest.ResponseMode, OidcConstants.ResponseModes.Query);
+
+            var validator = Factory.CreateAuthorizeRequestValidator();
+            var result = await validator.ValidateAsync(parameters);
+
+            result.IsError.Should().BeTrue();
+            result.Error.Should().Be(OidcConstants.AuthorizeErrors.InvalidRequest);
+        }
+
+        [Fact]
+        [Trait("Category", Category)]
+        public async Task Malformed_MaxAge()
         {
             var parameters = new NameValueCollection();
             parameters.Add(OidcConstants.AuthorizeRequest.ClientId, "codeclient");
+            parameters.Add(OidcConstants.AuthorizeRequest.Scope, "openid");
             parameters.Add(OidcConstants.AuthorizeRequest.RedirectUri, "https://server/cb");
             parameters.Add(OidcConstants.AuthorizeRequest.ResponseType, OidcConstants.ResponseTypes.Code);
-
-            var validator = Factory.CreateAuthorizeRequestValidator();
-            var result = await validator.ValidateAsync(parameters);
-
-            result.IsError.Should().BeTrue();
-            result.Error.Should().Be(OidcConstants.AuthorizeErrors.InvalidRequest);
-        }
-
-        [Fact]
-        [Trait("Category", Category)]
-        public async Task Missing_RedirectUri()
-        {
-            var parameters = new NameValueCollection();
-            parameters.Add(OidcConstants.AuthorizeRequest.ClientId, "client");
-            parameters.Add(OidcConstants.AuthorizeRequest.Scope, "openid");
-            parameters.Add(OidcConstants.AuthorizeRequest.ResponseType, OidcConstants.ResponseTypes.Code);
+            parameters.Add(OidcConstants.AuthorizeRequest.MaxAge, "malformed");
 
             var validator = Factory.CreateAuthorizeRequestValidator();
             var result = await validator.ValidateAsync(parameters);
@@ -193,6 +207,38 @@ namespace IdentityServer.UnitTests.Validation.AuthorizeRequest_Validation
 
         [Fact]
         [Trait("Category", Category)]
+        public async Task Missing_ClientId()
+        {
+            var parameters = new NameValueCollection();
+            parameters.Add(OidcConstants.AuthorizeRequest.Scope, "openid");
+            parameters.Add(OidcConstants.AuthorizeRequest.RedirectUri, "https://server/callback");
+            parameters.Add(OidcConstants.AuthorizeRequest.ResponseType, OidcConstants.ResponseTypes.Code);
+
+            var validator = Factory.CreateAuthorizeRequestValidator();
+            var result = await validator.ValidateAsync(parameters);
+
+            result.IsError.Should().BeTrue();
+            result.Error.Should().Be(OidcConstants.AuthorizeErrors.InvalidRequest);
+        }
+
+        [Fact]
+        [Trait("Category", Category)]
+        public async Task Missing_RedirectUri()
+        {
+            var parameters = new NameValueCollection();
+            parameters.Add(OidcConstants.AuthorizeRequest.ClientId, "client");
+            parameters.Add(OidcConstants.AuthorizeRequest.Scope, "openid");
+            parameters.Add(OidcConstants.AuthorizeRequest.ResponseType, OidcConstants.ResponseTypes.Code);
+
+            var validator = Factory.CreateAuthorizeRequestValidator();
+            var result = await validator.ValidateAsync(parameters);
+
+            result.IsError.Should().BeTrue();
+            result.Error.Should().Be(OidcConstants.AuthorizeErrors.InvalidRequest);
+        }
+
+        [Fact]
+        [Trait("Category", Category)]
         public async Task Missing_ResponseType()
         {
             var parameters = new NameValueCollection();
@@ -209,127 +255,35 @@ namespace IdentityServer.UnitTests.Validation.AuthorizeRequest_Validation
 
         [Fact]
         [Trait("Category", Category)]
-        public async Task Unknown_ResponseType()
+        public async Task Missing_Scope()
         {
             var parameters = new NameValueCollection();
             parameters.Add(OidcConstants.AuthorizeRequest.ClientId, "codeclient");
-            parameters.Add(OidcConstants.AuthorizeRequest.Scope, "openid");
-            parameters.Add(OidcConstants.AuthorizeRequest.RedirectUri, "https://server/cb");
-            parameters.Add(OidcConstants.AuthorizeRequest.ResponseType, "unknown");
-
-            var validator = Factory.CreateAuthorizeRequestValidator();
-            var result = await validator.ValidateAsync(parameters);
-
-            result.IsError.Should().BeTrue();
-            result.Error.Should().Be(OidcConstants.AuthorizeErrors.UnsupportedResponseType);
-        }
-
-        [Fact]
-        [Trait("Category", Category)]
-        public async Task Invalid_ResponseMode_For_IdToken_ResponseType()
-        {
-            var parameters = new NameValueCollection();
-            parameters.Add(OidcConstants.AuthorizeRequest.ClientId, "implicitclient");
-            parameters.Add(OidcConstants.AuthorizeRequest.Scope, "openid");
-            parameters.Add(OidcConstants.AuthorizeRequest.RedirectUri, "oob://implicit/cb");
-            parameters.Add(OidcConstants.AuthorizeRequest.ResponseType, OidcConstants.ResponseTypes.IdToken);
-            parameters.Add(OidcConstants.AuthorizeRequest.ResponseMode, OidcConstants.ResponseModes.Query);
-
-            var validator = Factory.CreateAuthorizeRequestValidator();
-            var result = await validator.ValidateAsync(parameters);
-
-            result.IsError.Should().BeTrue();
-            result.Error.Should().Be(OidcConstants.AuthorizeErrors.InvalidRequest);
-        }
-
-        [Fact]
-        [Trait("Category", Category)]
-        public async Task Invalid_ResponseMode_For_IdTokenToken_ResponseType()
-        {
-            var parameters = new NameValueCollection();
-            parameters.Add(OidcConstants.AuthorizeRequest.ClientId, "implicitclient");
-            parameters.Add(OidcConstants.AuthorizeRequest.Scope, "openid");
-            parameters.Add(OidcConstants.AuthorizeRequest.RedirectUri, "oob://implicit/cb");
-            parameters.Add(OidcConstants.AuthorizeRequest.ResponseType, OidcConstants.ResponseTypes.IdTokenToken);
-            parameters.Add(OidcConstants.AuthorizeRequest.ResponseMode, OidcConstants.ResponseModes.Query);
-
-            var validator = Factory.CreateAuthorizeRequestValidator();
-            var result = await validator.ValidateAsync(parameters);
-
-            result.IsError.Should().BeTrue();
-            result.Error.Should().Be(OidcConstants.AuthorizeErrors.InvalidRequest);
-        }
-
-        [Fact]
-        [Trait("Category", Category)]
-        public async Task Invalid_ResponseMode_For_CodeToken_ResponseType()
-        {
-            var parameters = new NameValueCollection();
-            parameters.Add(OidcConstants.AuthorizeRequest.ClientId, "hybridclient");
-            parameters.Add(OidcConstants.AuthorizeRequest.Scope, "openid");
-            parameters.Add(OidcConstants.AuthorizeRequest.RedirectUri, "https://server/cb");
-            parameters.Add(OidcConstants.AuthorizeRequest.ResponseType, OidcConstants.ResponseTypes.CodeToken);
-            parameters.Add(OidcConstants.AuthorizeRequest.ResponseMode, OidcConstants.ResponseModes.Query);
-
-            var validator = Factory.CreateAuthorizeRequestValidator();
-            var result = await validator.ValidateAsync(parameters);
-
-            result.IsError.Should().BeTrue();
-            result.Error.Should().Be(OidcConstants.AuthorizeErrors.InvalidRequest);
-        }
-
-        [Fact]
-        [Trait("Category", Category)]
-        public async Task Invalid_ResponseMode_For_CodeIdToken_ResponseType()
-        {
-            var parameters = new NameValueCollection();
-            parameters.Add(OidcConstants.AuthorizeRequest.ClientId, "hybridclient");
-            parameters.Add(OidcConstants.AuthorizeRequest.Scope, "openid");
-            parameters.Add(OidcConstants.AuthorizeRequest.RedirectUri, "https://server/cb");
-            parameters.Add(OidcConstants.AuthorizeRequest.ResponseType, OidcConstants.ResponseTypes.CodeIdToken);
-            parameters.Add(OidcConstants.AuthorizeRequest.ResponseMode, OidcConstants.ResponseModes.Query);
-
-            var validator = Factory.CreateAuthorizeRequestValidator();
-            var result = await validator.ValidateAsync(parameters);
-
-            result.IsError.Should().BeTrue();
-            result.Error.Should().Be(OidcConstants.AuthorizeErrors.InvalidRequest);
-        }
-
-        [Fact]
-        [Trait("Category", Category)]
-        public async Task Invalid_ResponseMode_For_CodeIdTokenToken_ResponseType()
-        {
-            var parameters = new NameValueCollection();
-            parameters.Add(OidcConstants.AuthorizeRequest.ClientId, "hybridclient");
-            parameters.Add(OidcConstants.AuthorizeRequest.Scope, "openid");
-            parameters.Add(OidcConstants.AuthorizeRequest.RedirectUri, "https://server/cb");
-            parameters.Add(OidcConstants.AuthorizeRequest.ResponseType, OidcConstants.ResponseTypes.CodeIdTokenToken);
-            parameters.Add(OidcConstants.AuthorizeRequest.ResponseMode, OidcConstants.ResponseModes.Query);
-
-            var validator = Factory.CreateAuthorizeRequestValidator();
-            var result = await validator.ValidateAsync(parameters);
-
-            result.IsError.Should().BeTrue();
-            result.Error.Should().Be(OidcConstants.AuthorizeErrors.InvalidRequest);
-        }
-
-        [Fact]
-        [Trait("Category", Category)]
-        public async Task Malformed_MaxAge()
-        {
-            var parameters = new NameValueCollection();
-            parameters.Add(OidcConstants.AuthorizeRequest.ClientId, "codeclient");
-            parameters.Add(OidcConstants.AuthorizeRequest.Scope, "openid");
             parameters.Add(OidcConstants.AuthorizeRequest.RedirectUri, "https://server/cb");
             parameters.Add(OidcConstants.AuthorizeRequest.ResponseType, OidcConstants.ResponseTypes.Code);
-            parameters.Add(OidcConstants.AuthorizeRequest.MaxAge, "malformed");
 
             var validator = Factory.CreateAuthorizeRequestValidator();
             var result = await validator.ValidateAsync(parameters);
 
             result.IsError.Should().BeTrue();
             result.Error.Should().Be(OidcConstants.AuthorizeErrors.InvalidRequest);
+        }
+
+        [Fact]
+        [Trait("Category", Category)]
+        public async Task Mixed_Token_Only_Request()
+        {
+            var parameters = new NameValueCollection();
+            parameters.Add(OidcConstants.AuthorizeRequest.ClientId, "implicitclient");
+            parameters.Add(OidcConstants.AuthorizeRequest.Scope, "openid resource");
+            parameters.Add(OidcConstants.AuthorizeRequest.RedirectUri, "oob://implicit/cb");
+            parameters.Add(OidcConstants.AuthorizeRequest.ResponseType, OidcConstants.ResponseTypes.Token);
+
+            var validator = Factory.CreateAuthorizeRequestValidator();
+            var result = await validator.ValidateAsync(parameters);
+
+            result.IsError.Should().BeTrue();
+            result.Error.Should().Be(OidcConstants.AuthorizeErrors.InvalidScope);
         }
 
         [Fact]
@@ -352,14 +306,24 @@ namespace IdentityServer.UnitTests.Validation.AuthorizeRequest_Validation
 
         [Fact]
         [Trait("Category", Category)]
-        public async Task Invalid_ResponseMode_For_TokenIdToken_ResponseType()
+        public void Null_Parameter()
+        {
+            var validator = Factory.CreateAuthorizeRequestValidator();
+
+            Func<Task> act = () => validator.ValidateAsync(null);
+
+            act.Should().ThrowAsync<ArgumentNullException>();
+        }
+
+        [Fact]
+        [Trait("Category", Category)]
+        public async Task OpenId_IdToken_Request_Nonce_Missing()
         {
             var parameters = new NameValueCollection();
             parameters.Add(OidcConstants.AuthorizeRequest.ClientId, "implicitclient");
             parameters.Add(OidcConstants.AuthorizeRequest.Scope, "openid");
             parameters.Add(OidcConstants.AuthorizeRequest.RedirectUri, "oob://implicit/cb");
-            parameters.Add(OidcConstants.AuthorizeRequest.ResponseType, "token id_token"); // Unconventional order
-            parameters.Add(OidcConstants.AuthorizeRequest.ResponseMode, OidcConstants.ResponseModes.Query);
+            parameters.Add(OidcConstants.AuthorizeRequest.ResponseType, OidcConstants.ResponseTypes.IdToken);
 
             var validator = Factory.CreateAuthorizeRequestValidator();
             var result = await validator.ValidateAsync(parameters);
@@ -368,22 +332,22 @@ namespace IdentityServer.UnitTests.Validation.AuthorizeRequest_Validation
             result.Error.Should().Be(OidcConstants.AuthorizeErrors.InvalidRequest);
         }
 
+        // fails because openid scope is requested, but no response type that indicates an identity token
         [Fact]
         [Trait("Category", Category)]
-        public async Task Invalid_ResponseMode_For_IdTokenCodeToken_ResponseType()
+        public async Task OpenId_Token_Only_Request()
         {
             var parameters = new NameValueCollection();
-            parameters.Add(OidcConstants.AuthorizeRequest.ClientId, "hybridclient");
-            parameters.Add(OidcConstants.AuthorizeRequest.Scope, "openid");
-            parameters.Add(OidcConstants.AuthorizeRequest.RedirectUri, "https://server/cb");
-            parameters.Add(OidcConstants.AuthorizeRequest.ResponseType, "id_token code token"); // Unconventional ordering
-            parameters.Add(OidcConstants.AuthorizeRequest.ResponseMode, OidcConstants.ResponseModes.Query);
+            parameters.Add(OidcConstants.AuthorizeRequest.ClientId, "implicitclient");
+            parameters.Add(OidcConstants.AuthorizeRequest.Scope, IdentityServerConstants.StandardScopes.OpenId);
+            parameters.Add(OidcConstants.AuthorizeRequest.RedirectUri, "oob://implicit/cb");
+            parameters.Add(OidcConstants.AuthorizeRequest.ResponseType, OidcConstants.ResponseTypes.Token);
 
             var validator = Factory.CreateAuthorizeRequestValidator();
             var result = await validator.ValidateAsync(parameters);
 
             result.IsError.Should().BeTrue();
-            result.Error.Should().Be(OidcConstants.AuthorizeErrors.InvalidRequest);
+            result.Error.Should().Be(OidcConstants.AuthorizeErrors.InvalidScope);
         }
 
         [Fact]
@@ -403,6 +367,41 @@ namespace IdentityServer.UnitTests.Validation.AuthorizeRequest_Validation
 
             result.IsError.Should().BeTrue();
             result.Error.Should().Be(OidcConstants.AuthorizeErrors.InvalidRequest);
+        }
+
+        [Fact]
+        [Trait("Category", Category)]
+        public async Task Resource_Only_IdToken_Request()
+        {
+            var parameters = new NameValueCollection();
+            parameters.Add(OidcConstants.AuthorizeRequest.ClientId, "implicitclient");
+            parameters.Add(OidcConstants.AuthorizeRequest.Scope, "resource");
+            parameters.Add(OidcConstants.AuthorizeRequest.RedirectUri, "oob://implicit/cb");
+            parameters.Add(OidcConstants.AuthorizeRequest.ResponseType, OidcConstants.ResponseTypes.IdToken);
+            parameters.Add(OidcConstants.AuthorizeRequest.Nonce, "abc");
+
+            var validator = Factory.CreateAuthorizeRequestValidator();
+            var result = await validator.ValidateAsync(parameters);
+
+            result.IsError.Should().BeTrue();
+            result.Error.Should().Be(OidcConstants.AuthorizeErrors.InvalidRequest);
+        }
+
+        [Fact]
+        [Trait("Category", Category)]
+        public async Task Unknown_ResponseType()
+        {
+            var parameters = new NameValueCollection();
+            parameters.Add(OidcConstants.AuthorizeRequest.ClientId, "codeclient");
+            parameters.Add(OidcConstants.AuthorizeRequest.Scope, "openid");
+            parameters.Add(OidcConstants.AuthorizeRequest.RedirectUri, "https://server/cb");
+            parameters.Add(OidcConstants.AuthorizeRequest.ResponseType, "unknown");
+
+            var validator = Factory.CreateAuthorizeRequestValidator();
+            var result = await validator.ValidateAsync(parameters);
+
+            result.IsError.Should().BeTrue();
+            result.Error.Should().Be(OidcConstants.AuthorizeErrors.UnsupportedResponseType);
         }
     }
 }

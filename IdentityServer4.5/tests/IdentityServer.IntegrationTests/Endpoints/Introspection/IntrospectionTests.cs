@@ -1,16 +1,18 @@
-// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
-
+// Copyright (c) Brock Allen & Dominick Baier. All rights reserved. Licensed under the Apache
+// License, Version 2.0. See LICENSE in the project root for license information.
 
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Text.Json.Serialization;
+using System.Text.Json;
 using System.Threading.Tasks;
 using FluentAssertions;
 using IdentityModel.Client;
 using IdentityServer.IntegrationTests.Endpoints.Introspection.Setup;
+using IdentityServer4.Extensions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Newtonsoft.Json;
@@ -51,59 +53,6 @@ namespace IdentityServer.IntegrationTests.Endpoints.Introspection
 
         [Fact]
         [Trait("Category", Category)]
-        public async Task Unknown_scope_should_fail()
-        {
-            var form = new Dictionary<string, string>();
-
-            _client.SetBasicAuthentication("unknown", "invalid");
-            var response = await _client.PostAsync(IntrospectionEndpoint, new FormUrlEncodedContent(form));
-
-            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        }
-
-        [Fact]
-        [Trait("Category", Category)]
-        public async Task Invalid_scope_secret_should_fail()
-        {
-            var form = new Dictionary<string, string>();
-
-            _client.SetBasicAuthentication("api1", "invalid");
-            var response = await _client.PostAsync(IntrospectionEndpoint, new FormUrlEncodedContent(form));
-
-            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        }
-
-        [Fact]
-        [Trait("Category", Category)]
-        public async Task Missing_token_should_fail()
-        {
-            var form = new Dictionary<string, string>();
-
-            _client.SetBasicAuthentication("api1", "secret");
-            var response = await _client.PostAsync(IntrospectionEndpoint, new FormUrlEncodedContent(form));
-
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        }
-
-        [Fact]
-        [Trait("Category", Category)]
-        public async Task Invalid_token_should_fail()
-        {
-            var introspectionResponse = await _client.IntrospectTokenAsync(new TokenIntrospectionRequest
-            {
-                Address = IntrospectionEndpoint,
-                ClientId = "api1",
-                ClientSecret = "secret",
-
-                Token = "invalid"
-            });
-
-            introspectionResponse.IsActive.Should().Be(false);
-            introspectionResponse.IsError.Should().Be(false);
-        }
-
-        [Fact]
-        [Trait("Category", Category)]
         public async Task Invalid_Content_type_should_fail()
         {
             var tokenResponse = await _client.RequestClientCredentialsTokenAsync(new ClientCredentialsTokenRequest
@@ -129,109 +78,43 @@ namespace IdentityServer.IntegrationTests.Endpoints.Introspection
 
         [Fact]
         [Trait("Category", Category)]
-        public async Task Valid_token_and_valid_scope_should_succeed()
+        public async Task Invalid_scope_secret_should_fail()
         {
-            var tokenResponse = await _client.RequestClientCredentialsTokenAsync(new ClientCredentialsTokenRequest
-            {
-                Address = TokenEndpoint,
-                ClientId = "client1",
-                ClientSecret = "secret",
-                Scope = "api1"
-            });
+            var form = new Dictionary<string, string>();
 
+            _client.SetBasicAuthentication("api1", "invalid");
+            var response = await _client.PostAsync(IntrospectionEndpoint, new FormUrlEncodedContent(form));
+
+            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        }
+
+        [Fact]
+        [Trait("Category", Category)]
+        public async Task Invalid_token_should_fail()
+        {
             var introspectionResponse = await _client.IntrospectTokenAsync(new TokenIntrospectionRequest
             {
                 Address = IntrospectionEndpoint,
                 ClientId = "api1",
                 ClientSecret = "secret",
 
-                Token = tokenResponse.AccessToken
+                Token = "invalid"
             });
 
-            introspectionResponse.IsActive.Should().Be(true);
+            introspectionResponse.IsActive.Should().Be(false);
             introspectionResponse.IsError.Should().Be(false);
-
-            var scopes = from c in introspectionResponse.Claims
-                         where c.Type == "scope"
-                         select c;
-
-            scopes.Count().Should().Be(1);
-            scopes.First().Value.Should().Be("api1");
         }
 
         [Fact]
         [Trait("Category", Category)]
-        public async Task Response_data_should_be_valid_using_single_scope()
+        public async Task Missing_token_should_fail()
         {
-            var tokenResponse = await _client.RequestClientCredentialsTokenAsync(new ClientCredentialsTokenRequest
-            {
-                Address = TokenEndpoint,
-                ClientId = "client1",
-                ClientSecret = "secret",
-                Scope = "api1"
-            });
+            var form = new Dictionary<string, string>();
 
-            var introspectionResponse = await _client.IntrospectTokenAsync(new TokenIntrospectionRequest
-            {
-                Address = IntrospectionEndpoint,
-                ClientId = "api1",
-                ClientSecret = "secret",
+            _client.SetBasicAuthentication("api1", "secret");
+            var response = await _client.PostAsync(IntrospectionEndpoint, new FormUrlEncodedContent(form));
 
-                Token = tokenResponse.AccessToken
-            });
-
-            var values = introspectionResponse.Json.ToObject<Dictionary<string, object>>();
-
-            values["aud"].GetType().Name.Should().Be("String");
-            values["iss"].GetType().Name.Should().Be("String");
-            values["nbf"].GetType().Name.Should().Be("Int64");
-            values["exp"].GetType().Name.Should().Be("Int64");
-            values["client_id"].GetType().Name.Should().Be("String");
-            values["active"].GetType().Name.Should().Be("Boolean");
-            values["scope"].GetType().Name.Should().Be("String");
-
-            values["scope"].ToString().Should().Be("api1");
-        }
-
-        [Fact]
-        [Trait("Category", Category)]
-        public async Task Response_data_with_user_authentication_should_be_valid_using_single_scope()
-        {
-            var tokenResponse = await _client.RequestPasswordTokenAsync(new PasswordTokenRequest
-            {
-                Address = TokenEndpoint,
-                ClientId = "ro.client",
-                ClientSecret = "secret",
-                UserName = "bob",
-                Password = "bob",
-
-                Scope = "api1",
-            });
-
-            tokenResponse.IsError.Should().BeFalse();
-
-            var introspectionResponse = await _client.IntrospectTokenAsync(new TokenIntrospectionRequest
-            {
-                Address = IntrospectionEndpoint,
-                ClientId = "api1",
-                ClientSecret = "secret",
-
-                Token = tokenResponse.AccessToken
-            });
-
-            var values = introspectionResponse.Json.ToObject<Dictionary<string, object>>();
-
-            values["aud"].GetType().Name.Should().Be("String");
-            values["iss"].GetType().Name.Should().Be("String");
-            values["nbf"].GetType().Name.Should().Be("Int64");
-            values["exp"].GetType().Name.Should().Be("Int64");
-            values["auth_time"].GetType().Name.Should().Be("Int64");
-            values["client_id"].GetType().Name.Should().Be("String");
-            values["sub"].GetType().Name.Should().Be("String");
-            values["active"].GetType().Name.Should().Be("Boolean");
-            values["scope"].GetType().Name.Should().Be("String");
-
-            values["scope"].ToString().Should().Be("api1");
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
 
         [Fact]
@@ -260,20 +143,21 @@ namespace IdentityServer.IntegrationTests.Endpoints.Introspection
 
             var values = introspectionResponse.Json.ToObject<Dictionary<string, object>>();
 
-            values["aud"].GetType().Name.Should().Be("JArray");
+            ((JsonElement)values["aud"]).ValueKind.ToString().Should().Be("Array");
 
-            var audiences = ((JArray)values["aud"]);
-            foreach (var aud in audiences)
-            {
-                aud.Type.Should().Be(JTokenType.String);
-            }
+            var audiences = ((JsonElement)values["aud"]).ToString();
+            //foreach (var aud in audiences)
+            //{
+            //    aud.Type.Should().Be(JTokenType.String);
+            //}
+            audiences.Should().Be("[\"api2\",\"api3\"]");
 
-            values["iss"].GetType().Name.Should().Be("String");
-            values["nbf"].GetType().Name.Should().Be("Int64");
-            values["exp"].GetType().Name.Should().Be("Int64");
-            values["client_id"].GetType().Name.Should().Be("String");
-            values["active"].GetType().Name.Should().Be("Boolean");
-            values["scope"].GetType().Name.Should().Be("String");
+            ((JsonElement)values["iss"]).ValueKind.ToString().Should().Be("String");
+            ((JsonElement)values["nbf"]).ValueKind.ToString().Should().Be("Number");
+            ((JsonElement)values["exp"]).ValueKind.ToString().Should().Be("Number");
+            ((JsonElement)values["client_id"]).ValueKind.ToString().Should().Be("String");
+            ((JsonElement)values["active"]).ValueKind.ToString().Should().Be("True");
+            ((JsonElement)values["scope"]).ValueKind.ToString().Should().Be("String");
 
             var scopes = values["scope"].ToString();
             scopes.Should().Be("api3-a api3-b");
@@ -305,16 +189,91 @@ namespace IdentityServer.IntegrationTests.Endpoints.Introspection
 
             var values = introspectionResponse.Json.ToObject<Dictionary<string, object>>();
 
-            values["aud"].GetType().Name.Should().Be("String");
-            values["iss"].GetType().Name.Should().Be("String"); 
-            values["nbf"].GetType().Name.Should().Be("Int64"); 
-            values["exp"].GetType().Name.Should().Be("Int64"); 
-            values["client_id"].GetType().Name.Should().Be("String"); 
-            values["active"].GetType().Name.Should().Be("Boolean"); 
-            values["scope"].GetType().Name.Should().Be("String");
+            ((JsonElement)values["aud"]).ValueKind.ToString().Should().Be("String");
+            ((JsonElement)values["iss"]).ValueKind.ToString().Should().Be("String");
+            ((JsonElement)values["nbf"]).ValueKind.ToString().Should().Be("Number");
+            ((JsonElement)values["exp"]).ValueKind.ToString().Should().Be("Number");
+            ((JsonElement)values["client_id"]).ValueKind.ToString().Should().Be("String");
+            ((JsonElement)values["active"]).ValueKind.ToString().Should().Be("True");
+            ((JsonElement)values["scope"]).ValueKind.ToString().Should().Be("String");
 
             var scopes = values["scope"].ToString();
             scopes.Should().Be("api3-a api3-b");
+        }
+
+        [Fact]
+        [Trait("Category", Category)]
+        public async Task Response_data_should_be_valid_using_single_scope()
+        {
+            var tokenResponse = await _client.RequestClientCredentialsTokenAsync(new ClientCredentialsTokenRequest
+            {
+                Address = TokenEndpoint,
+                ClientId = "client1",
+                ClientSecret = "secret",
+                Scope = "api1"
+            });
+
+            var introspectionResponse = await _client.IntrospectTokenAsync(new TokenIntrospectionRequest
+            {
+                Address = IntrospectionEndpoint,
+                ClientId = "api1",
+                ClientSecret = "secret",
+
+                Token = tokenResponse.AccessToken
+            });
+
+            var values = introspectionResponse.Json.ToObject<Dictionary<string, object>>();
+
+            ((JsonElement)values["aud"]).ValueKind.ToString().Should().Be("String");
+            ((JsonElement)values["iss"]).ValueKind.ToString().Should().Be("String");
+            ((JsonElement)values["nbf"]).ValueKind.ToString().Should().Be("Number");
+            ((JsonElement)values["exp"]).ValueKind.ToString().Should().Be("Number");
+            ((JsonElement)values["client_id"]).ValueKind.ToString().Should().Be("String");
+            ((JsonElement)values["active"]).ValueKind.ToString().Should().Be("True");
+            ((JsonElement)values["scope"]).ValueKind.ToString().Should().Be("String");
+
+            ((JsonElement)values["scope"]).ToString().Should().Be("api1");
+        }
+
+        [Fact]
+        [Trait("Category", Category)]
+        public async Task Response_data_with_user_authentication_should_be_valid_using_single_scope()
+        {
+            var tokenResponse = await _client.RequestPasswordTokenAsync(new PasswordTokenRequest
+            {
+                Address = TokenEndpoint,
+                ClientId = "ro.client",
+                ClientSecret = "secret",
+                UserName = "bob",
+                Password = "bob",
+
+                Scope = "api1",
+            });
+
+            tokenResponse.IsError.Should().BeFalse();
+
+            var introspectionResponse = await _client.IntrospectTokenAsync(new TokenIntrospectionRequest
+            {
+                Address = IntrospectionEndpoint,
+                ClientId = "api1",
+                ClientSecret = "secret",
+
+                Token = tokenResponse.AccessToken
+            });
+
+            var values = introspectionResponse.Json.ToObject<Dictionary<string, object>>();
+
+            ((JsonElement)values["aud"]).ValueKind.ToString().Should().Be("String");
+            ((JsonElement)values["iss"]).ValueKind.ToString().Should().Be("String");
+            ((JsonElement)values["nbf"]).ValueKind.ToString().Should().Be("Number");
+            ((JsonElement)values["exp"]).ValueKind.ToString().Should().Be("Number");
+            ((JsonElement)values["auth_time"]).ValueKind.ToString().Should().Be("Number");
+            ((JsonElement)values["client_id"]).ValueKind.ToString().Should().Be("String");
+            ((JsonElement)values["sub"]).ValueKind.ToString().Should().Be("String");
+            ((JsonElement)values["active"]).ValueKind.ToString().Should().Be("True");
+            ((JsonElement)values["scope"]).ValueKind.ToString().Should().Be("String");
+
+            ((JsonElement)values["scope"]).ValueKind.ToString().Should().Be("String");
         }
 
         [Fact]
@@ -354,15 +313,26 @@ namespace IdentityServer.IntegrationTests.Endpoints.Introspection
 
         [Fact]
         [Trait("Category", Category)]
-        public async Task Valid_token_with_valid_multiple_scopes()
+        public async Task Unknown_scope_should_fail()
+        {
+            var form = new Dictionary<string, string>();
+
+            _client.SetBasicAuthentication("unknown", "invalid");
+            var response = await _client.PostAsync(IntrospectionEndpoint, new FormUrlEncodedContent(form));
+
+            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        }
+
+        [Fact]
+        [Trait("Category", Category)]
+        public async Task Valid_token_and_valid_scope_should_succeed()
         {
             var tokenResponse = await _client.RequestClientCredentialsTokenAsync(new ClientCredentialsTokenRequest
             {
                 Address = TokenEndpoint,
                 ClientId = "client1",
                 ClientSecret = "secret",
-
-                Scope = "api1 api2",
+                Scope = "api1"
             });
 
             var introspectionResponse = await _client.IntrospectTokenAsync(new TokenIntrospectionRequest
@@ -409,6 +379,39 @@ namespace IdentityServer.IntegrationTests.Endpoints.Introspection
 
             introspectionResponse.IsActive.Should().Be(false);
             introspectionResponse.IsError.Should().Be(false);
+        }
+
+        [Fact]
+        [Trait("Category", Category)]
+        public async Task Valid_token_with_valid_multiple_scopes()
+        {
+            var tokenResponse = await _client.RequestClientCredentialsTokenAsync(new ClientCredentialsTokenRequest
+            {
+                Address = TokenEndpoint,
+                ClientId = "client1",
+                ClientSecret = "secret",
+
+                Scope = "api1 api2",
+            });
+
+            var introspectionResponse = await _client.IntrospectTokenAsync(new TokenIntrospectionRequest
+            {
+                Address = IntrospectionEndpoint,
+                ClientId = "api1",
+                ClientSecret = "secret",
+
+                Token = tokenResponse.AccessToken
+            });
+
+            introspectionResponse.IsActive.Should().Be(true);
+            introspectionResponse.IsError.Should().Be(false);
+
+            var scopes = from c in introspectionResponse.Claims
+                         where c.Type == "scope"
+                         select c;
+
+            scopes.Count().Should().Be(1);
+            scopes.First().Value.Should().Be("api1");
         }
     }
 }
