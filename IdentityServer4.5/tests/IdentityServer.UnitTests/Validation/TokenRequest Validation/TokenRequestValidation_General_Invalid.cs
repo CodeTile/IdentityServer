@@ -1,6 +1,5 @@
-﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
-
+﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved. Licensed under the Apache
+// License, Version 2.0. See LICENSE in the project root for license information.
 
 using System;
 using System.Collections.Specialized;
@@ -25,17 +24,6 @@ namespace IdentityServer.UnitTests.Validation.TokenRequest_Validation
 
         [Fact]
         [Trait("Category", Category)]
-        public void Parameters_Null()
-        {
-            var validator = Factory.CreateTokenRequestValidator();
-
-            Func<Task> act = () => validator.ValidateRequestAsync(null, null);
-
-            act.Should().Throw<ArgumentNullException>();
-        }
-
-        [Fact]
-        [Trait("Category", Category)]
         public void Client_Null()
         {
             var validator = Factory.CreateTokenRequestValidator();
@@ -47,40 +35,7 @@ namespace IdentityServer.UnitTests.Validation.TokenRequest_Validation
 
             Func<Task> act = () => validator.ValidateRequestAsync(parameters, null);
 
-            act.Should().Throw<ArgumentNullException>();
-        }
-
-        [Fact]
-        [Trait("Category", Category)]
-        public async Task Unknown_Grant_Type()
-        {
-            var client = await _clients.FindEnabledClientByIdAsync("codeclient");
-            var store = Factory.CreateAuthorizationCodeStore();
-
-            var code = new AuthorizationCode
-            {
-                CreationTime = DateTime.UtcNow,
-                ClientId = client.ClientId,
-                Lifetime = client.AuthorizationCodeLifetime,
-                IsOpenId = true,
-                RedirectUri = "https://server/cb",
-                Subject = _subject
-            };
-
-            var handle = await store.StoreAuthorizationCodeAsync(code);
-
-            var validator = Factory.CreateTokenRequestValidator(
-                authorizationCodeStore: store);
-
-            var parameters = new NameValueCollection();
-            parameters.Add(OidcConstants.TokenRequest.GrantType, "unknown");
-            parameters.Add(OidcConstants.TokenRequest.Code, handle);
-            parameters.Add(OidcConstants.TokenRequest.RedirectUri, "https://server/cb");
-
-            var result = await validator.ValidateRequestAsync(parameters, client.ToValidationResult());
-
-            result.IsError.Should().BeTrue();
-            result.Error.Should().Be(OidcConstants.TokenErrors.UnsupportedGrantType);
+            act.Should().ThrowAsync<ArgumentNullException>();
         }
 
         [Fact]
@@ -91,7 +46,7 @@ namespace IdentityServer.UnitTests.Validation.TokenRequest_Validation
             var codeStore = Factory.CreateAuthorizationCodeStore();
 
             var validator = Factory.CreateTokenRequestValidator(
-                authorizationCodeStore:codeStore);
+                authorizationCodeStore: codeStore);
 
             var parameters = new NameValueCollection();
             parameters.Add(OidcConstants.TokenRequest.GrantType, "client_credentials");
@@ -125,6 +80,50 @@ namespace IdentityServer.UnitTests.Validation.TokenRequest_Validation
                 authorizationCodeStore: store);
 
             var parameters = new NameValueCollection();
+            parameters.Add(OidcConstants.TokenRequest.Code, handle);
+            parameters.Add(OidcConstants.TokenRequest.RedirectUri, "https://server/cb");
+
+            var result = await validator.ValidateRequestAsync(parameters, client.ToValidationResult());
+
+            result.IsError.Should().BeTrue();
+            result.Error.Should().Be(OidcConstants.TokenErrors.UnsupportedGrantType);
+        }
+
+        [Fact]
+        [Trait("Category", Category)]
+        public void Parameters_Null()
+        {
+            var validator = Factory.CreateTokenRequestValidator();
+
+            Func<Task> act = () => validator.ValidateRequestAsync(null, null);
+
+            act.Should().ThrowAsync<ArgumentNullException>();
+        }
+
+        [Fact]
+        [Trait("Category", Category)]
+        public async Task Unknown_Grant_Type()
+        {
+            var client = await _clients.FindEnabledClientByIdAsync("codeclient");
+            var store = Factory.CreateAuthorizationCodeStore();
+
+            var code = new AuthorizationCode
+            {
+                CreationTime = DateTime.UtcNow,
+                ClientId = client.ClientId,
+                Lifetime = client.AuthorizationCodeLifetime,
+                IsOpenId = true,
+                RedirectUri = "https://server/cb",
+                Subject = _subject
+            };
+
+            var handle = await store.StoreAuthorizationCodeAsync(code);
+
+            var validator = Factory.CreateTokenRequestValidator(
+                authorizationCodeStore: store);
+
+            var parameters = new NameValueCollection();
+            parameters.Add(OidcConstants.TokenRequest.GrantType, "unknown");
             parameters.Add(OidcConstants.TokenRequest.Code, handle);
             parameters.Add(OidcConstants.TokenRequest.RedirectUri, "https://server/cb");
 

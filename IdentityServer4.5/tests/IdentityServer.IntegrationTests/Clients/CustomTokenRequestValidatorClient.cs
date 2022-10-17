@@ -1,6 +1,5 @@
-// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
-
+// Copyright (c) Brock Allen & Dominick Baier. All rights reserved. Licensed under the Apache
+// License, Version 2.0. See LICENSE in the project root for license information.
 
 using System.Collections.Generic;
 using System.Net.Http;
@@ -11,15 +10,12 @@ using IdentityServer.IntegrationTests.Clients.Setup;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Xunit;
+using Newtonsoft.Json;
 
 namespace IdentityServer.IntegrationTests.Clients
 {
     public class CustomTokenRequestValidatorClient
     {
-        private const string TokenEndpoint = "https://server/connect/token";
-
-        private readonly HttpClient _client;
-
         public CustomTokenRequestValidatorClient()
         {
             var val = new TestCustomTokenRequestValidator();
@@ -31,6 +27,10 @@ namespace IdentityServer.IntegrationTests.Clients
 
             _client = server.CreateClient();
         }
+
+        private const string TokenEndpoint = "https://server/connect/token";
+
+        private readonly HttpClient _client;
 
         [Fact]
         public async Task Client_credentials_request_should_contain_custom_response()
@@ -49,18 +49,21 @@ namespace IdentityServer.IntegrationTests.Clients
         }
 
         [Fact]
-        public async Task Resource_owner_credentials_request_should_contain_custom_response()
+        public async Task Extension_grant_request_should_contain_custom_response()
         {
-            var response = await _client.RequestPasswordTokenAsync(new PasswordTokenRequest
+            var response = await _client.RequestTokenAsync(new TokenRequest
             {
                 Address = TokenEndpoint,
+                GrantType = "custom",
 
-                ClientId = "roclient",
+                ClientId = "client.custom",
                 ClientSecret = "secret",
-                Scope = "api1",
 
-                UserName = "bob",
-                Password = "bob"
+                Parameters =
+                {
+                    { "scope", "api1" },
+                    { "custom_credential", "custom credential"}
+                }
             });
 
             var fields = GetFields(response);
@@ -96,21 +99,18 @@ namespace IdentityServer.IntegrationTests.Clients
         }
 
         [Fact]
-        public async Task Extension_grant_request_should_contain_custom_response()
+        public async Task Resource_owner_credentials_request_should_contain_custom_response()
         {
-            var response = await _client.RequestTokenAsync(new TokenRequest
+            var response = await _client.RequestPasswordTokenAsync(new PasswordTokenRequest
             {
                 Address = TokenEndpoint,
-                GrantType = "custom",
 
-                ClientId = "client.custom",
+                ClientId = "roclient",
                 ClientSecret = "secret",
+                Scope = "api1",
 
-                Parameters =
-                {
-                    { "scope", "api1" },
-                    { "custom_credential", "custom credential"}
-                }
+                UserName = "bob",
+                Password = "bob"
             });
 
             var fields = GetFields(response);
