@@ -1,21 +1,20 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
     <RootNamespace>IdentityServer4</RootNamespace>
     <SignAssembly>True</SignAssembly>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <Title>IdentityServer 4 .net5</Title>
+    <Title>IdentityServer.Storage 4 .net5</Title>
     <Copyright>IdentityServer4</Copyright>
     <Description>A port of IdentityServer4.Storage to .net5</Description>
     <AssemblyOriginatorKeyFile></AssemblyOriginatorKeyFile>
     <GenerateDocumentationFile>False</GenerateDocumentationFile>
     <Version>4.5.0.0</Version>
+    <AssemblyName>IdentiyServer4.Storage</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="IdentityModel" Version="6.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
   </ItemGroup>
-
 </Project>
